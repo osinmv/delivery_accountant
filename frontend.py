@@ -13,6 +13,7 @@ class MainWindow(Frame):
 
 
 
+
 root = MainWindow()
 root.master.title("Delivery Accountant")
 
