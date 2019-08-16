@@ -1,5 +1,89 @@
 import sqlite3
-
+import datetime
 
 # docket INTEGER,date_client INTEGER,date_require INTEGER, date_shipment INTEGER, requirements BLOB, notes TEXT
 
+#connection = sqlite3.connect("delivery.db")
+
+#crsr = connection.cursor()
+# crsr.execute("""
+#            CREATE TABLE deliveries (
+#            docket INTEGER PRIMARY KEY, customer TEXT, vendor TEXT, completed_tasks INTEGER,
+#            date_client INTEGER, date_require INTEGER, date_shipmet INTEGER, tasks BLOB, note TEXT
+#            );
+#            """)
+#crsr.execute("""CREATE TABLE customers (name TEXT, address TEXT, phone TEXT, contact TEXT); """)
+
+"""
+DO NOT FORGET TO ADD CONTEXT MANAGER, SO IF SOMETHING HAPPENS THE DB IS SAFE AND ALSO BACKUPS!!11!!1!1
+
+"""
+def partners_list(db_name):
+    """
+    returns customer list for dropdownmenu
+    """
+    list_cust = None
+    with sqlite3.connect("delivery.db") as conn:
+        crsr = conn.cursor()
+        if db_name == "customers":
+            crsr.execute("""SELECT name FROM customers BYORDER;""")
+        elif db_name == "vendors":
+            crsr.execute("""SELECT name FROM vendors BYORDER;""")
+        list_cust = crsr.fetchall()
+    return list_cust
+
+
+def partner_info(name, db_name):
+    list_cust = None
+    with sqlite3.connect("delivery.db") as conn:
+        crsr = conn.cursor()
+        if db_name == "customers":
+            crsr.execute("""SELECT * FROM customers WHERE name=?""", (name,))
+        elif db_name == "vendors":
+            crsr.execute("""SELECT * FROM vendors WHERE name=?""", (name,))
+
+        list_cust = crsr.fetchone()  # supposed to be one if something happens call
+    return list_cust
+
+
+def select_by_customer(num=None):
+    if num is None:
+        num = 10
+    entries = None
+    with sqlite3.connect("delivery.db") as conn:
+        conn = sqlite3.connect("delivery.db")
+        crsr = conn.cursor()
+        crsr.execute(
+            """SELECT docket, customer, date_client FROM deliveries WHERE customer=?""", ("Max&Co",))
+        entries = crsr.fetchmany(num)
+        
+    return entries
+
+def check_data(data):
+    for i in data:
+        if i.isspace():
+            raise ValueErrors
+def submit_partner(data,tasks):
+    
+    with sqlite3.connect("delivery.db") as conn:
+        crsr = conn.cursor()
+        if db_name == "customers":
+            crsr.execute("""INSERT INTO customers VALUES (?,?,?,?)""", (name,address,phone,contact))
+        elif db_name == "vendors":
+            crsr.execute("""INSERT INTO vendors VALUES (?,?,?,?)""", (name,address,phone,contact))
+        conn.commit()
+
+def submit_delivery(data):
+    with sqlite3.connect("delivery.db") as conn:
+        crsr = conn.cursor()
+        crsr.execute("""INSERT INTO deliveries VALUES (?,?,?,?)""", (name,address,phone,contact))
+       
+        conn.commit()
+
+def get_delivery(docket):
+    delivery = None
+    with sqlite3.connect("delivery.db") as conn:
+        crsr = conn.cursor()
+        crsr.execute("""SELECT * FROM deliveries WHERE docket=?""", (docket,))
+        delivery = crsr.fetchone()
+    return deliveries
