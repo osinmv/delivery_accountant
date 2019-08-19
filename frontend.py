@@ -1,7 +1,8 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from backend import partners_list, partner_info, get_delivery, get_recent, neat_time
-
+from backend import partners_list, partner_info, get_delivery, get_recent, neat_time, submit_delivery
+import datatime
+import time
 # import logging
 # to start logging the parts of the app
 
@@ -30,7 +31,7 @@ class MainWindow(tk.Frame):
         self.customer_info = self.draw_info("Customer", pos_x=230, pos_y=10)
         self.vendor_info = self.draw_info("Vendor", pos_x=230, pos_y=200)
         self.draw_tasks(10, pos_x=230, pos_y=390)
-        self.delivery_info(pos_x=725, pos_y=10)
+        self.delivery_info(pos_x=850, pos_y=10)
         self.draw_menu()
         self.update_customer_combobox()
         self.update_vendor_combobox()
@@ -54,7 +55,9 @@ class MainWindow(tk.Frame):
         self.editmenu = tk.Menu(self.menubar, tearoff=0)
         self.editmenu.add_command(label="New Customer", command=None)
         self.editmenu.add_command(label="New Vendor", command=None)
-        self.editmenu.add_command(label="New Delivery", command=None)
+        self.editmenu.add_command(
+            label="New Delivery", command=lambda: self.set_active)
+
         self.menubar.add_cascade(label="Edit", menu=self.editmenu)
 
         self.menubar.add_command(label="Reports", command=None)
@@ -79,14 +82,14 @@ class MainWindow(tk.Frame):
                 font_list = SECONDARYCOLOR
             else:
                 font_list = BASECOLOR
-            
+
             label = tk.Label(
                 self.label_frame_search, text=data[i],
                 bg=font_list)
             label.grid(column=0, row=i+1)
             label.bind("<Double-Button-1>", self.update_by_docket)
             self.docket_labels.append(label)
-            
+
             # creates the label with data and packs it with grid
 
     def delivery_info(self, pos_x, pos_y):
@@ -180,32 +183,20 @@ class MainWindow(tk.Frame):
             self.label_frame_dates, text="Client", font=BASICFONT)
         self.date_client.grid(column=0, row=0, sticky="w")
         self.date_required = tk.Label(
-            self.label_frame_dates, text="Required", font=BASICFONT)
+            self.label_frame_dates, text="Requested", font=BASICFONT)
         self.date_required.grid(column=0, row=1, sticky="w")
         self.date_ship = tk.Label(
             self.label_frame_dates, text="Shipment", font=BASICFONT)
         self.date_ship.grid(column=0, row=2, sticky="w")
 
-        self.entry_client = tk.Label(
-            self.label_frame_dates, text="2019/03/03", font=ENTRYFONT)
+        self.entry_client = ttk.Date(self.label_frame_dates, font=ENTRYFONT)
         self.entry_client.grid(column=1, row=0, sticky="w")
 
-        self.entry_required = tk.Label(
-            self.label_frame_dates, text="2019/03/03", font=ENTRYFONT)
+        self.entry_required = tk.Entry(self.label_frame_dates, font=ENTRYFONT)
         self.entry_required.grid(column=1, row=1, sticky="w")
 
-        self.entry_ship = tk.Label(
-            self.label_frame_dates, text="2019/03/03", font=ENTRYFONT)
+        self.entry_ship = tk.Entry(self.label_frame_dates, font=ENTRYFONT)
         self.entry_ship.grid(column=1, row=2, sticky="w")
-
-        # self.entry_client = tk.Entry(self.label_frame_dates,font=ENTRYFONT)
-        # self.entry_client.grid(column = 1,row = 0,sticky="w")
-
-        # self.entry_required = tk.Entry(self.label_frame_dates,font=ENTRYFONT)
-        # self.entry_required.grid(column = 1,row = 1,sticky="w")
-
-        # self.entry_ship = tk.Entry(self.label_frame_dates,font=ENTRYFONT)
-        # self.entry_ship.grid(column = 1,row = 2,sticky="w")
 
     def draw_tasks(self, length, pos_x, pos_y):
         """
@@ -265,9 +256,11 @@ class MainWindow(tk.Frame):
         # this method parses widget text because of the explained below
         """
             found intersting bug(probably just the thing that not all people know) in python
-            if you bind label(may work with other widgets) in a loop(which uses range(0,somenumber)) 
+            if you bind label(may work with other widgets) in a loop(which uses range(0,somenumber))
             with the callback the last value of i or other iterator will be passed to function!
         """
+
+        self.set_active()
         # docket, customer, vendor, completed_tasks, date_client, date_require,
         # date_shipment, tasks, note, delivery address
         data = get_delivery(int(event.widget["text"].split(" ")[2]))
@@ -283,17 +276,84 @@ class MainWindow(tk.Frame):
         )
         self.update_vendor_info(None)
         # update dates
-        self.entry_client.configure(text=neat_time(float(data[4])))
-        self.entry_required.configure(text=neat_time(float(data[5])))
-        self.entry_ship.configure(text=neat_time(float(data[6])))
+        self.insert_dates(data[4:7])
+
         # update tasks dont forget that
         # at some point it should turn from bytes -> tuple -> string
-        for num, task in enumerate(data[7]):
-            self.tasks[num][0] = data[7]  # and point to 1 part
-            self.tasks[num][1] = data[7]  # and point to 2 part
-            self.tasks[num][2] = data[7]  # and point to 3 part
+
+        # for num, task in enumerate(data[7]):
+        #    self.tasks[num][0] = data[7]  # and point to 1 part
+        #    self.tasks[num][1] = data[7]  # and point to 2 part
+        #    self.tasks[num][2] = data[7]  # and point to 3 part
         # update notes
+        self.update_notes(data[8])
         # update delivery address
+        self.update_delivery_address(data[9])
+        self.readonly_mode()
+
+    def update_notes(self, text):
+        self.notes.delete(1.0, tk.END)
+        self.notes.insert(1.0, text)
+
+    def update_delivery_address(self, text):
+        self.entry_del_address.delete(0, tk.END)
+        self.entry_del_address.insert(0, text)
+
+    def readonly_mode(self):
+        self.entry_client.configure(state="disabled")
+        self.entry_del_address.configure(state="disabled")
+        self.entry_required.configure(state="disabled")
+        self.entry_ship.configure(state="disabled")
+        for i in self.tasks:
+            i[0].configure(state="disabled")
+            # i[1].configure(state="disabled")
+            i[2].configure(state="disabled")
+        self.notes.configure(state="disabled")
+
+    def read_delivery_entries(self):
+        data = []
+        data.append(self.customer_info[1][0].get())
+        data.append(self.vendor_info[1][0].get())
+        done_tasks = True
+        tasks = []
+        for task, done, date in self.tasks:
+            if not task.get() and done.variable == 0:
+                done_tasks = False
+            tasks.append((task.get(), done.variable, date.get()))
+        data.append(done_tasks)
+        data.append(self.entry_client["text"])
+        data.append(self.entry_required["text"])
+        data.append(self.entry_ship["text"])
+        data.append(bytes(tasks), "utf-8")
+        data.append(self.note.get())
+        data.append(self.entry_del_address.get())
+        submit_delivery(data)
+
+    def time_format(self, time_str):
+        time_str = time_str.split("/")
+        return datatime.datatime(time)
+        # need time format !
+
+    def insert_dates(self, dates):
+        self.entry_client.delete(0, tk.END)
+        self.entry_ship.delete(0, tk.END)
+        self.entry_required.delete(0, tk.END)
+
+        self.entry_client.insert(0, neat_time(dates[0]))
+        self.entry_required.insert(0, neat_time(dates[1]))
+        self.entry_ship.insert(0, neat_time(dates[2]))
+
+    def set_active(self):
+        self.entry_client.configure(state="normal")
+        self.entry_del_address.configure(state="normal")
+        self.entry_required.configure(state="normal")
+        self.entry_ship.configure(state="normal")
+        for i in self.tasks:
+            i[0].configure(state="normal")
+            # i[1].configure(state="normal")
+            i[2].configure(state="normal")
+        self.notes.configure(state="normal")
+
 
 root = tk.Tk()
 app = MainWindow(master=root)

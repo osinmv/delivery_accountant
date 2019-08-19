@@ -1,6 +1,6 @@
 import sqlite3
 import datetime
-
+import time
 # docket INTEGER,date_client INTEGER,date_require INTEGER, date_shipment INTEGER, requirements BLOB, notes TEXT
 
 # connection = sqlite3.connect("delivery.db")
@@ -45,7 +45,7 @@ def partner_info(name, db_name):
         elif db_name == "vendors":
             crsr.execute("""SELECT * FROM vendors WHERE name=?""", (name,))
 
-        list_cust = crsr.fetchone()  
+        list_cust = crsr.fetchone()
         # supposed to be one if something happens call
     return list_cust
 
@@ -93,7 +93,13 @@ def submit_delivery(data):
     :parameters: data (list) gives entris in db order
     """
     with sqlite3.connect(DATABASEPATH) as conn:
-        pass
+        crsr = conn.coursor()
+        crsr.execute(
+            """
+            INSERT INTO deliveris VALUES (?,?,?,?,?,?,?,?,?)
+            """,
+            (data[0], data[1], data[2]*1, raw_time(data[3]), raw_time(data[4]),
+             raw_time(data[5]), data[6], data[7], data[8]))
         conn.commit()
 
 
@@ -141,3 +147,7 @@ def neat_data(data):
 def neat_time(seconds):
     date = datetime.date.fromtimestamp(seconds)
     return "{}/{}/{}".format(date.day, date.month, date.year)
+
+
+def raw_time(self, time_str):
+    return time.mktime(date_time.timetuple())
