@@ -1,15 +1,16 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from backend import select_by_customer, partners_list, partner_info
+from backend import partners_list, partner_info, get_delivery, get_recent, neat_time
 
-#import logging
+# import logging
 # to start logging the parts of the app
 
 LENGTH_DOCKETS = 11
 BASECOLOR = "gainsboro"
-HIGHFONT = ("Calibre", "18")
-BASICFONT = ("Calibre", "14")
-ENTRYFONT = ("Calibre", "12")
+SECONDARYCOLOR = "snow2"
+HIGHFONT = ("Open Sans", "18")
+BASICFONT = ("Open Sans", "14")
+ENTRYFONT = ("Open Sans", "12")
 
 
 class MainWindow(tk.Frame):
@@ -43,7 +44,8 @@ class MainWindow(tk.Frame):
         self.search_entry = tk.Entry(
             self.label_frame_search, bg=BASECOLOR, font=ENTRYFONT)
         self.search_entry.grid(column=0, row=0)
-        self.list_dockets()
+        data, dockets = get_recent()
+        self.list_dockets(data=data, dockets=dockets)
 
     def draw_menu(self):
         """Creates menue in the app"""
@@ -59,21 +61,32 @@ class MainWindow(tk.Frame):
         self.master.config(menu=self.menubar)
     # UI labels with dockets
 
-    def list_dockets(self, data=None):
+    def list_dockets(self, data=None, dockets=None):
         """
-        parameter: data(list) includes list of strings to show 
+        parameter: data(list) includes list of strings to show
         """
-        if data is None:
+        """if data is None:
             data = []
             for i in range(0, LENGTH_DOCKETS):
                 data.append("Max and Co. \n # 30041")
-
+        """
         # dont forget that there maybe less data than dockets!
 
         self.docket_labels = []
-        for i in range(0, LENGTH_DOCKETS):
-            self.docket_labels.append(tk.Label(
-                self.label_frame_search, text=data[i], bg=BASECOLOR, font=BASICFONT).grid(column=0, row=i+1, sticky="w"))
+        font_list = None
+        for i in range(0, len(data)):
+            if i % 2 == 0:
+                font_list = SECONDARYCOLOR
+            else:
+                font_list = BASECOLOR
+            
+            label = tk.Label(
+                self.label_frame_search, text=data[i],
+                bg=font_list)
+            label.grid(column=0, row=i+1)
+            label.bind("<Double-Button-1>", self.update_by_docket)
+            self.docket_labels.append(label)
+            
             # creates the label with data and packs it with grid
 
     def delivery_info(self, pos_x, pos_y):
@@ -97,7 +110,8 @@ class MainWindow(tk.Frame):
         :return: (list) returns two lists that have information about state
         """
         label_frame = tk.LabelFrame(
-            self.master, text="{} Info".format(name), height="350", width="300")
+            self.master, text="{} Info".format(name),
+            height="350", width="300")
         label_frame.place(x=pos_x, y=pos_y)
 
         # TODO backend method that returns all customers
@@ -151,10 +165,10 @@ class MainWindow(tk.Frame):
             contact = tk.Entry(label_frame)
             contact.grid(column=1, row=5)
 
-        return [[name_label, address_label, phone_label, contact_label], [combobox, name, address, phone, contact]]
+        return [[name_label, address_label, phone_label, contact_label],
+                [combobox, name, address, phone, contact]]
 
     def draw_dates(self, pos_x, pos_y):
-
         # ui for date widget
         self.label_frame_dates = tk.LabelFrame(
             text="About Dates", height="130", width="300")
@@ -184,19 +198,20 @@ class MainWindow(tk.Frame):
             self.label_frame_dates, text="2019/03/03", font=ENTRYFONT)
         self.entry_ship.grid(column=1, row=2, sticky="w")
 
-        #self.entry_client = tk.Entry(self.label_frame_dates,font=ENTRYFONT)
-        #self.entry_client.grid(column = 1,row = 0,sticky="w")
+        # self.entry_client = tk.Entry(self.label_frame_dates,font=ENTRYFONT)
+        # self.entry_client.grid(column = 1,row = 0,sticky="w")
 
-        #self.entry_required = tk.Entry(self.label_frame_dates,font=ENTRYFONT)
-        #self.entry_required.grid(column = 1,row = 1,sticky="w")
+        # self.entry_required = tk.Entry(self.label_frame_dates,font=ENTRYFONT)
+        # self.entry_required.grid(column = 1,row = 1,sticky="w")
 
-        #self.entry_ship = tk.Entry(self.label_frame_dates,font=ENTRYFONT)
-        #self.entry_ship.grid(column = 1,row = 2,sticky="w")
+        # self.entry_ship = tk.Entry(self.label_frame_dates,font=ENTRYFONT)
+        # self.entry_ship.grid(column = 1,row = 2,sticky="w")
 
     def draw_tasks(self, length, pos_x, pos_y):
         """
-        draws tasks in this format Task: goal(string)  |  checkbox(bool)  |  target date(date)
-        :parameter: length: (integer) tells how any tasks to draw 
+        draws tasks in this format Task:
+            goal(string)  |  checkbox(bool)  |  target date(date)
+        :parameter: length: (integer) tells how any tasks to draw
 
         """
         self.tasks = []
@@ -228,7 +243,8 @@ class MainWindow(tk.Frame):
         data = partner_info(self.customer_info[1][0].get(), "customers")
         for n, d in enumerate(data):
             self.customer_info[1][n+1].configure(text=d)
-        # return [[name_label, address_label, phone_label, contact_label], [combobox, name, address, phone, contact]]
+        # return [[name_label, address_label, phone_label, contact_label],
+        # [combobox, name, address, phone, contact]]
 
     def update_customer_combobox(self):
         """
@@ -245,17 +261,40 @@ class MainWindow(tk.Frame):
         for n, d in enumerate(data):
             self.vendor_info[1][n+1].configure(text=d)
 
-    def update_notes(self, note):
-        pass
+    def update_by_docket(self, event):
+        # this method parses widget text because of the explained below
+        """
+            found intersting bug(probably just the thing that not all people know) in python
+            if you bind label(may work with other widgets) in a loop(which uses range(0,somenumber)) 
+            with the callback the last value of i or other iterator will be passed to function!
+        """
+        # docket, customer, vendor, completed_tasks, date_client, date_require,
+        # date_shipment, tasks, note, delivery address
+        data = get_delivery(int(event.widget["text"].split(" ")[2]))
+        # update customer info
+        self.customer_info[1][0].current(
+            self.customer_info[1][0]["values"].index((data[1],)))
+        self.update_customer_info(None)
+        # none instead of event as update does
+        # not depend on event variables
+        # update vendor info
+        self.vendor_info[1][0].current(
+            self.vendor_info[1][0]["values"].index((data[2],))
+        )
+        self.update_vendor_info(None)
+        # update dates
+        self.entry_client.configure(text=neat_time(float(data[4])))
+        self.entry_required.configure(text=neat_time(float(data[5])))
+        self.entry_ship.configure(text=neat_time(float(data[6])))
+        # update tasks dont forget that
+        # at some point it should turn from bytes -> tuple -> string
+        for num, task in enumerate(data[7]):
+            self.tasks[num][0] = data[7]  # and point to 1 part
+            self.tasks[num][1] = data[7]  # and point to 2 part
+            self.tasks[num][2] = data[7]  # and point to 3 part
+        # update notes
+        # update delivery address
 
-    def update_dates(self, datelist):
-        pass
-
-    def update_delivery_address(self, address):
-        pass
-    def update_all(self,docket):
-        pass
-    
 root = tk.Tk()
 app = MainWindow(master=root)
 root.mainloop()
