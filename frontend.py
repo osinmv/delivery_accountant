@@ -1,7 +1,7 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 from backend import partners_list, partner_info, get_delivery, get_recent, neat_time, submit_delivery
-import datatime
+import datetime
 import time
 # import logging
 # to start logging the parts of the app
@@ -189,13 +189,13 @@ class MainWindow(tk.Frame):
             self.label_frame_dates, text="Shipment", font=BASICFONT)
         self.date_ship.grid(column=0, row=2, sticky="w")
 
-        self.entry_client = ttk.Date(self.label_frame_dates, font=ENTRYFONT)
+        self.entry_client = ttk.Entry(self.label_frame_dates, font=ENTRYFONT)
         self.entry_client.grid(column=1, row=0, sticky="w")
 
-        self.entry_required = tk.Entry(self.label_frame_dates, font=ENTRYFONT)
+        self.entry_required = ttk.Entry(self.label_frame_dates, font=ENTRYFONT)
         self.entry_required.grid(column=1, row=1, sticky="w")
 
-        self.entry_ship = tk.Entry(self.label_frame_dates, font=ENTRYFONT)
+        self.entry_ship = ttk.Entry(self.label_frame_dates, font=ENTRYFONT)
         self.entry_ship.grid(column=1, row=2, sticky="w")
 
     def draw_tasks(self, length, pos_x, pos_y):
@@ -300,15 +300,15 @@ class MainWindow(tk.Frame):
         self.entry_del_address.insert(0, text)
 
     def readonly_mode(self):
-        self.entry_client.configure(state="disabled")
-        self.entry_del_address.configure(state="disabled")
-        self.entry_required.configure(state="disabled")
-        self.entry_ship.configure(state="disabled")
+        self.entry_client.configure(state="readonly")
+        self.entry_del_address.configure(state="readonly")
+        self.entry_required.configure(state="readonly")
+        self.entry_ship.configure(state="readonly")
         for i in self.tasks:
-            i[0].configure(state="disabled")
-            # i[1].configure(state="disabled")
-            i[2].configure(state="disabled")
-        self.notes.configure(state="disabled")
+            i[0].configure(state="readonly")
+            i[1].configure(state="readonly")
+            i[2].configure(state="readonly")
+        self.notes.configure(state="readonly")
 
     def read_delivery_entries(self):
         data = []
@@ -316,22 +316,24 @@ class MainWindow(tk.Frame):
         data.append(self.vendor_info[1][0].get())
         done_tasks = True
         tasks = []
+"""
         for task, done, date in self.tasks:
-            if not task.get() and done.variable == 0:
+            if not task.get() and not task.get().isspace() and done.variable == 0:
                 done_tasks = False
             tasks.append((task.get(), done.variable, date.get()))
+"""
         data.append(done_tasks)
         data.append(self.entry_client["text"])
         data.append(self.entry_required["text"])
         data.append(self.entry_ship["text"])
-        data.append(bytes(tasks), "utf-8")
+        data.append(bytes(tasks, "utf-8"))
         data.append(self.note.get())
         data.append(self.entry_del_address.get())
         submit_delivery(data)
 
     def time_format(self, time_str):
         time_str = time_str.split("/")
-        return datatime.datatime(time)
+        return datetime.datatime(time)
         # need time format !
 
     def insert_dates(self, dates):

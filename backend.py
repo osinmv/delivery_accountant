@@ -1,6 +1,7 @@
 import sqlite3
 import datetime
 import time
+
 # docket INTEGER,date_client INTEGER,date_require INTEGER, date_shipment INTEGER, requirements BLOB, notes TEXT
 
 # connection = sqlite3.connect("delivery.db")
@@ -150,4 +151,4 @@ def neat_time(seconds):
 
 
 def raw_time(self, time_str):
-    return time.mktime(date_time.timetuple())
+    return time.mktime(datetime.timetuple())
