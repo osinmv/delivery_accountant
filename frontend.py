@@ -2,7 +2,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 from backend import partners_list, partner_info, get_delivery, get_recent, neat_time, submit_delivery
 import datetime
-import time
+
 # import logging
 # to start logging the parts of the app
 
@@ -12,7 +12,9 @@ SECONDARYCOLOR = "snow2"
 HIGHFONT = ("Open Sans", "18")
 BASICFONT = ("Open Sans", "14")
 ENTRYFONT = ("Open Sans", "12")
-
+"""
+SHOULD CREATE GOOD TIEM SYSTEM IN FUTURE
+"""
 
 class MainWindow(tk.Frame):
     def __init__(self, master=None):
@@ -35,7 +37,10 @@ class MainWindow(tk.Frame):
         self.draw_menu()
         self.update_customer_combobox()
         self.update_vendor_combobox()
-        # self.update_data()
+        # the only button for now in this app
+        self.btn_submit = ttk.Button(text="submit")
+        self.btn_submit.place(x=10, y=10)
+        self.btn_submit.place_forget()
 
     def search_engine(self):
         # search engine UI
@@ -56,13 +61,20 @@ class MainWindow(tk.Frame):
         self.editmenu.add_command(label="New Customer", command=None)
         self.editmenu.add_command(label="New Vendor", command=None)
         self.editmenu.add_command(
-            label="New Delivery", command=lambda: self.set_active)
+            label="New Delivery", command=self.new_delivery)
 
         self.menubar.add_cascade(label="Edit", menu=self.editmenu)
 
         self.menubar.add_command(label="Reports", command=None)
         self.master.config(menu=self.menubar)
     # UI labels with dockets
+
+    def new_delivery(self):
+        
+        self.set_active()
+        self.clear_entries()
+        self.btn_submit.place(x=10, y=10)
+        self.btn_submit.configure( command=self.read_delivery_entries)
 
     def list_dockets(self, data=None, dockets=None):
         """
@@ -189,13 +201,15 @@ class MainWindow(tk.Frame):
             self.label_frame_dates, text="Shipment", font=BASICFONT)
         self.date_ship.grid(column=0, row=2, sticky="w")
 
-        self.entry_client = ttk.Entry(self.label_frame_dates, font=ENTRYFONT)
+        self.entry_client = tk.Entry(
+            self.label_frame_dates, font=ENTRYFONT)
         self.entry_client.grid(column=1, row=0, sticky="w")
 
-        self.entry_required = ttk.Entry(self.label_frame_dates, font=ENTRYFONT)
+        self.entry_required = tk.Entry(
+            self.label_frame_dates, font=ENTRYFONT)
         self.entry_required.grid(column=1, row=1, sticky="w")
 
-        self.entry_ship = ttk.Entry(self.label_frame_dates, font=ENTRYFONT)
+        self.entry_ship = tk.Entry(self.label_frame_dates, font=ENTRYFONT)
         self.entry_ship.grid(column=1, row=2, sticky="w")
 
     def draw_tasks(self, length, pos_x, pos_y):
@@ -214,12 +228,13 @@ class MainWindow(tk.Frame):
             entry = tk.Entry(self.label_frame_tasks, width="75")
             entry.grid(column=0, row=i)
 
-            check_button = tk.Checkbutton(self.label_frame_tasks)
+            check = tk.BooleanVar()
+            check_button = tk.Checkbutton(self.label_frame_tasks, var=check)
             check_button.grid(column=1, row=i)
 
             date = tk.Entry(self.label_frame_tasks, width="20")
             date.grid(column=2, row=i)
-            self.tasks.append([entry, check_button, date])
+            self.tasks.append([entry, check_button, date, check])
 
     def draw_notes(self, pos_x, pos_y):
 
@@ -305,10 +320,12 @@ class MainWindow(tk.Frame):
         self.entry_required.configure(state="readonly")
         self.entry_ship.configure(state="readonly")
         for i in self.tasks:
-            i[0].configure(state="readonly")
-            i[1].configure(state="readonly")
-            i[2].configure(state="readonly")
-        self.notes.configure(state="readonly")
+            i[0].configure(state="disabled")
+            i[1].configure(state="disabled")
+            i[2].configure(state="disabled")
+        self.notes.configure(state="disabled")
+        self.vendor_info[1][0].configure(state="disabled")
+        self.customer_info[1][0].configure(state="disabled")
 
     def read_delivery_entries(self):
         data = []
@@ -316,25 +333,21 @@ class MainWindow(tk.Frame):
         data.append(self.vendor_info[1][0].get())
         done_tasks = True
         tasks = []
-"""
-        for task, done, date in self.tasks:
-            if not task.get() and not task.get().isspace() and done.variable == 0:
+
+        for task, done, date, check in self.tasks:
+            if not task.get() and not task.get().isspace() and check:
                 done_tasks = False
-            tasks.append((task.get(), done.variable, date.get()))
-"""
+            tasks.append((task.get(), check, date.get()))
+
         data.append(done_tasks)
-        data.append(self.entry_client["text"])
-        data.append(self.entry_required["text"])
-        data.append(self.entry_ship["text"])
-        data.append(bytes(tasks, "utf-8"))
-        data.append(self.note.get())
+        data.append(time_format(self.entry_client.get()))
+        data.append(time_format(self.entry_required.get()))
+        data.append(time_format(self.entry_ship.get()))
+        data.append(bytes("hello", "utf-8"))
+        
+        data.append(self.notes.get(1.0, tk.END))
         data.append(self.entry_del_address.get())
         submit_delivery(data)
-
-    def time_format(self, time_str):
-        time_str = time_str.split("/")
-        return datetime.datatime(time)
-        # need time format !
 
     def insert_dates(self, dates):
         self.entry_client.delete(0, tk.END)
@@ -345,6 +358,21 @@ class MainWindow(tk.Frame):
         self.entry_required.insert(0, neat_time(dates[1]))
         self.entry_ship.insert(0, neat_time(dates[2]))
 
+    def clear_entries(self):
+        self.insert_dates([0, 0, 0])
+        self.entry_client.delete(0, tk.END)
+        self.entry_del_address.delete(0, tk.END)
+
+        self.entry_required.delete(0, tk.END)
+        self.entry_ship.delete(0, tk.END)
+        for i in self.tasks:
+            i[0].delete(0, tk.END)
+            i[1].deselect()
+            i[2].delete(0, tk.END)
+        self.notes.delete(1.0, tk.END)
+        self.vendor_info[1][0].current(0)
+        self.customer_info[1][0].current(0)
+
     def set_active(self):
         self.entry_client.configure(state="normal")
         self.entry_del_address.configure(state="normal")
@@ -352,9 +380,19 @@ class MainWindow(tk.Frame):
         self.entry_ship.configure(state="normal")
         for i in self.tasks:
             i[0].configure(state="normal")
-            # i[1].configure(state="normal")
+            i[1].configure(state="normal")
             i[2].configure(state="normal")
         self.notes.configure(state="normal")
+        self.vendor_info[1][0].configure(state="active")
+        self.customer_info[1][0].configure(state="active")
+
+
+def time_format(time_str):
+    time_str = time_str.split("/")
+    date = int(datetime.datetime(
+        day=int(time_str[0]), month=int(time_str[1]),
+        year=int(time_str[2])).strftime("%S"))
+    return date
 
 
 root = tk.Tk()

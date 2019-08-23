@@ -94,13 +94,13 @@ def submit_delivery(data):
     :parameters: data (list) gives entris in db order
     """
     with sqlite3.connect(DATABASEPATH) as conn:
-        crsr = conn.coursor()
+        crsr = conn.cursor()
         crsr.execute(
             """
-            INSERT INTO deliveris VALUES (?,?,?,?,?,?,?,?,?)
+            INSERT INTO deliveries VALUES (?,?,?,?,?,?,?,?,?,?)
             """,
-            (data[0], data[1], data[2]*1, raw_time(data[3]), raw_time(data[4]),
-             raw_time(data[5]), data[6], data[7], data[8]))
+            (crsr.lastrowid, data[0], data[1], data[2], data[3], data[4],
+             data[5], data[6], data[7], data[8]))
         conn.commit()
 
 
