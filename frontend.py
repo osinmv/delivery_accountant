@@ -5,7 +5,9 @@ import datetime
 
 # import logging
 # to start logging the parts of the app
-
+"""
+License code 
+"""
 LENGTH_DOCKETS = 11
 BASECOLOR = "gainsboro"
 SECONDARYCOLOR = "snow2"
@@ -13,8 +15,9 @@ HIGHFONT = ("Open Sans", "18")
 BASICFONT = ("Open Sans", "14")
 ENTRYFONT = ("Open Sans", "12")
 """
-SHOULD CREATE GOOD TIEM SYSTEM IN FUTURE
+SHOULD CREATE GOOD TIME SYSTEM IN FUTURE
 """
+
 
 class MainWindow(tk.Frame):
     def __init__(self, master=None):
@@ -32,7 +35,7 @@ class MainWindow(tk.Frame):
         self.draw_notes(535, 200)
         self.customer_info = self.draw_info("Customer", pos_x=230, pos_y=10)
         self.vendor_info = self.draw_info("Vendor", pos_x=230, pos_y=200)
-        self.draw_tasks(10, pos_x=230, pos_y=390)
+        self.draw_tasks(12, pos_x=230, pos_y=390)
         self.delivery_info(pos_x=850, pos_y=10)
         self.draw_menu()
         self.update_customer_combobox()
@@ -70,11 +73,11 @@ class MainWindow(tk.Frame):
     # UI labels with dockets
 
     def new_delivery(self):
-        
+
         self.set_active()
         self.clear_entries()
         self.btn_submit.place(x=10, y=10)
-        self.btn_submit.configure( command=self.read_delivery_entries)
+        self.btn_submit.configure(command=self.read_delivery_entries)
 
     def list_dockets(self, data=None, dockets=None):
         """
@@ -296,10 +299,7 @@ class MainWindow(tk.Frame):
         # update tasks dont forget that
         # at some point it should turn from bytes -> tuple -> string
 
-        # for num, task in enumerate(data[7]):
-        #    self.tasks[num][0] = data[7]  # and point to 1 part
-        #    self.tasks[num][1] = data[7]  # and point to 2 part
-        #    self.tasks[num][2] = data[7]  # and point to 3 part
+        self.update_tasks(data[7])
         # update notes
         self.update_notes(data[8])
         # update delivery address
@@ -328,25 +328,36 @@ class MainWindow(tk.Frame):
         self.customer_info[1][0].configure(state="disabled")
 
     def read_delivery_entries(self):
+        self.set_active()
         data = []
         data.append(self.customer_info[1][0].get())
         data.append(self.vendor_info[1][0].get())
         done_tasks = True
-        tasks = []
+        tasks = ""
 
         for task, done, date, check in self.tasks:
-            if not task.get() and not task.get().isspace() and check:
-                done_tasks = False
-            tasks.append((task.get(), check, date.get()))
+            
+            if task.get() and not task.get().isspace() and not (task.get() is None):
+                print(task.get())
+                print(date.get())
+                print(check)
+                if not check:
+                    done_tasks = False
+                if check:
+                    check = "1"
+                else:
+                    check = "0"
+                tasks = tasks + ""+task.get()+"|"+check+"|"+date.get()+"\n"
+                print(tasks)
 
         data.append(done_tasks)
         data.append(time_format(self.entry_client.get()))
         data.append(time_format(self.entry_required.get()))
         data.append(time_format(self.entry_ship.get()))
-        data.append(bytes("hello", "utf-8"))
-        
+        data.append(tasks)
         data.append(self.notes.get(1.0, tk.END))
         data.append(self.entry_del_address.get())
+        self.readonly_mode()
         submit_delivery(data)
 
     def insert_dates(self, dates):
@@ -358,17 +369,19 @@ class MainWindow(tk.Frame):
         self.entry_required.insert(0, neat_time(dates[1]))
         self.entry_ship.insert(0, neat_time(dates[2]))
 
-    def clear_entries(self):
-        self.insert_dates([0, 0, 0])
-        self.entry_client.delete(0, tk.END)
-        self.entry_del_address.delete(0, tk.END)
-
-        self.entry_required.delete(0, tk.END)
-        self.entry_ship.delete(0, tk.END)
+    def clear_tasks(self):
         for i in self.tasks:
             i[0].delete(0, tk.END)
             i[1].deselect()
             i[2].delete(0, tk.END)
+
+    def clear_entries(self):
+        self.insert_dates([0, 0, 0])
+        self.entry_client.delete(0, tk.END)
+        self.entry_del_address.delete(0, tk.END)
+        self.entry_required.delete(0, tk.END)
+        self.entry_ship.delete(0, tk.END)
+        self.clear_tasks()
         self.notes.delete(1.0, tk.END)
         self.vendor_info[1][0].current(0)
         self.customer_info[1][0].current(0)
@@ -385,6 +398,22 @@ class MainWindow(tk.Frame):
         self.notes.configure(state="normal")
         self.vendor_info[1][0].configure(state="active")
         self.customer_info[1][0].configure(state="active")
+
+    def update_tasks(self, text):
+        if text is None:
+            return None
+        text = text.split("\n")
+        text.remove("")
+        self.clear_tasks()
+        for num, obj in enumerate(text):
+            obj = obj.split("|")
+            print(obj)
+            self.tasks[num][0].delete(0, tk.END)
+            self.tasks[num][0].insert(0, obj[0])
+            self.tasks[num][3] = (int(obj[1]) == 1)
+            self.tasks[num][2].delete(0, tk.END)
+            self.tasks[num][2].insert(0, obj[2])
+
 
 
 def time_format(time_str):

@@ -89,6 +89,16 @@ def submit_partner(data, db_name):
         conn.commit()
 
 
+def get_open_tasks():
+    data = None
+    with sqlite3.connect(DATABASEPATH) as conn:
+        crsr = conn.cursor()
+        crsr.execute("""SELECT docket, customer, date_require, tasks FROM deliveries
+                     WHERE completed_tasks=1 ORDER BY date_require""")
+        data = crsr.fetchall()
+    return data
+
+
 def submit_delivery(data):
     """
     :parameters: data (list) gives entris in db order
@@ -152,3 +162,14 @@ def neat_time(seconds):
 
 def raw_time(self, time_str):
     return time.mktime(datetime.timetuple())
+
+
+def parse_tasks(data):
+    if data is None:
+        return ['',"",""]
+    data = data.split("\n")
+    data.remove("")
+    neat_data = []
+    for i in data:
+        neat_data.append(i.split("|"))
+    return neat_data
