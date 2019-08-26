@@ -41,9 +41,9 @@ def partner_info(name, db_name):
     list_cust = None
     with sqlite3.connect(DATABASEPATH) as conn:
         crsr = conn.cursor()
-        if db_name == "customers":
+        if db_name == "Customers":
             crsr.execute("""SELECT * FROM customers WHERE name=?""", (name,))
-        elif db_name == "vendors":
+        elif db_name == "Vendors":
             crsr.execute("""SELECT * FROM vendors WHERE name=?""", (name,))
 
         list_cust = crsr.fetchone()
@@ -124,6 +124,7 @@ def get_delivery(docket):
     return delivery
 
 
+
 def get_recent(num=None):
     if num is None:
         num = 10
@@ -149,7 +150,7 @@ def neat_data(data):
     dockets = []
     for i in data:
         neat_str = "Docket# : {} \n Customer : {} \n Date Shipment {} \n Delivery Address : \n {}".format(
-            i[0], i[1], neat_time(i[2]), i[3])
+            i[0], i[1], i[2], i[3])
         neat_data.append(neat_str)
         dockets.append(i[0])
     return neat_data, dockets
@@ -166,7 +167,7 @@ def raw_time(self, time_str):
 
 def parse_tasks(data):
     if data is None:
-        return ['',"",""]
+        return ["","",""]
     data = data.split("\n")
     data.remove("")
     neat_data = []

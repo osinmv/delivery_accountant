@@ -4,7 +4,7 @@ from backend import get_open_tasks, parse_tasks, neat_time
 
 def report_open_tasks():
     """
-    takes data from SQL db and transforms to PDF on some conditions 
+    takes data from SQL db and transforms to PDF on some conditions
     """
     data = get_open_tasks()
     pdf = FPDF(format="A4")
@@ -21,7 +21,7 @@ def report_open_tasks():
             if entry is None:
                 continue
             try:
-                print(entry)
+                # print(entry)
                 pdf.cell(0, 10, txt="       Task: " +
                          entry[0]+" Due Date:   "+entry[2], ln=1, align="L")
             except:
