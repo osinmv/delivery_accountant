@@ -1,7 +1,9 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from backend import partners_list, partner_info, get_delivery, get_recent, neat_time, submit_delivery, submit_partner
+from backend import partners_list, partner_info, get_delivery, get_recent, neat_time, submit_delivery, submit_partner, create_tables
 import datetime
+from pdf_writer import report_open_tasks
+from tkcalendar import DateEntry
 
 # import logging
 # to start logging the parts of the app
@@ -26,7 +28,7 @@ class MainWindow(tk.Frame):
         self.master.title("Delivery Accountant")
         # self.master.minsize(1440, 1080)
         self.master.resizable(True, True)
-
+        create_tables()
         # draws searching engine
         self.duedate_dockets()
         # additional info for dates
@@ -75,11 +77,14 @@ class MainWindow(tk.Frame):
             label="New Delivery", command=self.new_delivery)
 
         self.menubar.add_cascade(label="Edit", menu=self.editmenu)
-
-        self.menubar.add_command(label="Reports", command=None)
+        
+        self.menubar.add_command(label="Report", command=report_open_tasks)
+        self.menubar.add_command(label="Test database", command=self.db_test)
         self.master.config(menu=self.menubar)
     # UI labels with dockets
-
+    def db_test(self):
+        self.after_action_update()
+        create_tables()
     def update_dockets_list(self, event):
         num = self.search_entry.get()
         self.update_by_docket(event, docket=int(num))
@@ -87,6 +92,8 @@ class MainWindow(tk.Frame):
     def new_delivery(self):
         self.set_active()
         self.clear_entries()
+        self.clear_by_partner("Customer")
+        self.clear_by_partner("Vendor")
         self.btn_submit.configure(command=self.read_delivery_entries)
 
     def list_dockets(self, data=None, dockets=None):
@@ -129,7 +136,7 @@ class MainWindow(tk.Frame):
             self.label_frame_delivery, text="Delivery Address")
         self.deliver_address.grid(column=0, row=0)
         self.entry_del_address = tk.Entry(
-            self.label_frame_delivery)
+            self.label_frame_delivery, width=30)
         self.entry_del_address.grid(column=1, row=0)
 
     def draw_info(self, name, pos_x, pos_y, span_x, span_y):
@@ -165,16 +172,16 @@ class MainWindow(tk.Frame):
 
         # if need lbels than it is going to draw labels, if not draw entries
 
-        name = tk.Entry(label_frame)
+        name = tk.Entry(label_frame, width=30)
         name.grid(column=1, row=1, sticky="NESW")
 
-        address = tk.Entry(label_frame)
+        address = tk.Entry(label_frame, width=30)
         address.grid(column=1, row=2, sticky="NESW")
 
-        phone = tk.Entry(label_frame)
+        phone = tk.Entry(label_frame, width=30)
         phone.grid(column=1, row=3, sticky="NESW")
 
-        contact = tk.Entry(label_frame)
+        contact = tk.Entry(label_frame, width=30)
         contact.grid(column=1, row=4, sticky="NESW")
 
         return [[name_label, address_label, phone_label, contact_label],
@@ -199,15 +206,15 @@ class MainWindow(tk.Frame):
             self.label_frame_dates, text="Shipment", font=BASICFONT)
         self.date_ship.grid(column=0, row=2, sticky="w")
 
-        self.entry_client = tk.Entry(
+        self.entry_client = DateEntry(
             self.label_frame_dates, font=ENTRYFONT)
         self.entry_client.grid(column=1, row=0, sticky="w")
 
-        self.entry_required = tk.Entry(
+        self.entry_required = DateEntry(
             self.label_frame_dates, font=ENTRYFONT)
         self.entry_required.grid(column=1, row=1, sticky="w")
 
-        self.entry_ship = tk.Entry(self.label_frame_dates, font=ENTRYFONT)
+        self.entry_ship = DateEntry(self.label_frame_dates, font=ENTRYFONT)
         self.entry_ship.grid(column=1, row=2, sticky="w")
 
     def draw_tasks(self, length, pos_x, pos_y, span_x, span_y):
@@ -232,7 +239,7 @@ class MainWindow(tk.Frame):
             check_button = tk.Checkbutton(self.label_frame_tasks, var=check)
             check_button.grid(column=1, row=i)
 
-            date = tk.Entry(self.label_frame_tasks, width="25")
+            date = DateEntry(self.label_frame_tasks, width="25")
             date.grid(column=2, row=i)
             self.tasks.append([entry, check_button, date, check])
 
@@ -252,7 +259,7 @@ class MainWindow(tk.Frame):
         self.activate_info_entries("Customer")
         for n, d in enumerate(data):
             self.customer_info[1][n+1].delete(0, tk.END)
-            self.customer_info[1][n+1].insert(0, d)
+            self.customer_info[1][n+1].insert(0, str(d))
         self.deactivate_info_entries("Customer")
         # return [[name_label, address_label, phone_label, contact_label],
         # [combobox, name, address, phone, contact]]
@@ -272,7 +279,7 @@ class MainWindow(tk.Frame):
         self.activate_info_entries("Vendor")
         for n, d in enumerate(data):
             self.vendor_info[1][n+1].delete(0, tk.END)
-            self.vendor_info[1][n+1].insert(0, d)
+            self.vendor_info[1][n+1].insert(1, str(d))
         self.deactivate_info_entries("Vendor")
 
     def update_by_docket(self, event, docket=None):
@@ -282,10 +289,11 @@ class MainWindow(tk.Frame):
             if you bind label(may work with other widgets) in a loop(which uses range(0,somenumber))
             with the callback the last value of i or other iterator will be passed to function!
         """
-        self.deactivate_info_entries("Customer")
-        self.deactivate_info_entries("Vendor")
+        self.activate_info_entries("Customer")
+        self.activate_info_entries("Vendor")
         self.set_active()
         self.clear_tasks()
+        self.btn_submit.configure(command=None)
         # docket, customer, vendor, completed_tasks, date_client, date_require,
         # date_shipment, tasks, note, delivery address
         data = None
@@ -295,8 +303,14 @@ class MainWindow(tk.Frame):
             data = get_delivery(docket)
         if data is None:
             # create a message that will say that something wrong was inputed
-            pass
+            self.clear_entries()
+            self.clear_by_partner("Customer")
+            self.clear_by_partner("Vendor")
+            self.clear_tasks()
+
         else:
+            self.update_customer_combobox()
+            self.update_vendor_combobox()
             # update customer info
             self.customer_info[1][0].current(
                 self.customer_info[1][0]["values"].index((data[1],)))
@@ -321,8 +335,9 @@ class MainWindow(tk.Frame):
             # update delivery address
             self.update_delivery_address(data[9])
         self.readonly_mode()
-        self.activate_info_entries("Customer")
-        self.activate_info_entries("Vendor")
+        self.deactivate_info_entries("Customer")
+        self.deactivate_info_entries("Vendor")
+        self.after_action_update()
 
     def update_notes(self, text):
         self.notes.delete(1.0, tk.END)
@@ -342,8 +357,8 @@ class MainWindow(tk.Frame):
             i[1].configure(state="disabled")
             i[2].configure(state="disabled")
         self.notes.configure(state="disabled")
-        self.vendor_info[1][0].configure(state="disabled")
-        self.customer_info[1][0].configure(state="disabled")
+        self.vendor_info[1][0].configure(state="readonly")
+        self.customer_info[1][0].configure(state="readonly")
 
     def read_delivery_entries(self):
         self.set_active()
@@ -374,6 +389,11 @@ class MainWindow(tk.Frame):
         data.append(self.entry_del_address.get())
         self.readonly_mode()
         submit_delivery(data)
+        self.after_action_update()
+
+    def after_action_update(self):
+        self.update_customer_combobox()
+        self.update_vendor_combobox()
 
     def insert_dates(self, dates):
         self.entry_client.delete(0, tk.END)
@@ -400,10 +420,14 @@ class MainWindow(tk.Frame):
         self.notes.delete(1.0, tk.END)
         self.vendor_info[1][0].current(0)
         self.customer_info[1][0].current(0)
-        for i in self.vendor_info[1][1:]:
-            i.delete(0, tk.END)
-        for i in self.customer_info[1][1:]:
-            i.delete(0, tk.END)
+
+    def clear_by_partner(self, partner):
+        if partner == "Customer":
+            for i in self.vendor_info[1]:
+                i.delete(0, tk.END)
+        if partner == "Vendor":
+            for i in self.customer_info[1]:
+                i.delete(0, tk.END)
 
     def set_active(self):
         self.entry_client.configure(state="normal")
@@ -418,21 +442,21 @@ class MainWindow(tk.Frame):
         self.vendor_info[1][0].configure(state="active")
         self.customer_info[1][0].configure(state="active")
 
-    def activate_info_entries(self, type):
-        if type == "Customer":
+    def activate_info_entries(self, partner):
+        if partner == "Customer":
             for i in self.customer_info[1]:
                 i.configure(state="normal")
-        if type == "Vendor":
+        if partner == "Vendor":
             for i in self.vendor_info[1]:
                 i.configure(state="normal")
 
-    def deactivate_info_entries(self, type):
-        if type == "Customer":
+    def deactivate_info_entries(self, partner):
+        if partner == "Customer":
             for i in self.customer_info[1]:
-                i.configure(state="disabled")
-        if type == "Vendor":
+                i.configure(state="readonly")
+        if partner == "Vendor":
             for i in self.vendor_info[1]:
-                i.configure(state="disabled")
+                i.configure(state="readonly")
 
     def update_tasks(self, text):
         if text is None:
@@ -448,28 +472,40 @@ class MainWindow(tk.Frame):
             self.tasks[num][2].delete(0, tk.END)
             self.tasks[num][2].insert(0, obj[2])
 
-    def read_partner(self, type):
-        if type == "Customer":
+    def read_partner(self, partner):
+        data = None
+        if partner == "Customer":
             data = self.customer_info[1]
-        elif type == "Vendor":
+        elif partner == "Vendor":
             data = self.vendor_info[1]
         submit_data = []
         for i in data:
             submit_data.append(i.get())
-        submit_partner(submit_data)
+        submit_partner(submit_data, partner)
         self.clear_entries()
+        self.after_action_update()
 
-    def new_partner(self, type):
+    def new_partner(self, partner):
+        self.set_active()
         self.clear_entries()
-        self.activate_info_entries(type)
-        self.btn_submit.configure(command=lambda: self.read_partner(type))
+        self.readonly_mode()
+        self.activate_info_entries("Vendor")
+        self.activate_info_entries("Customer")
+
+        self.clear_by_partner("Vendor")
+        self.clear_by_partner("Customer")
+        if partner == "Vendor":
+            self.deactivate_info_entries("Customer")
+        elif partner == "Customer":
+            self.deactivate_info_entries("Vendor")
+        self.btn_submit.configure(command=lambda: self.read_partner(partner))
 
 
 def time_format(time_str):
     time_str = time_str.split("/")
     return datetime.datetime(
-        year=int(time_str[2]), month=int(time_str[1]), day=int(time_str[0])
-    ).strftime("%d/%m/%Y")
+        year=int("20"+time_str[2]), month=int(time_str[1]), day=int(time_str[0])
+    ).strftime("%m/%d/%Y")
 
 
 root = tk.Tk()

@@ -19,9 +19,31 @@ import time
 DO NOT FORGET TO ADD CONTEXT MANAGER, SO IF SOMETHING HAPPENS THE DB IS SAFE AND ALSO BACKUPS!!11!!1!1
 
 """
-DATABASEPATH = "DataBase/delivery.db"
+DATABASEPATH = "deliveries.db"
 
-
+def create_tables():
+    with sqlite3.connect(DATABASEPATH) as conn:
+        crsr = conn.cursor()
+        crsr.execute("""CREATE TABLE "deliveries" (
+                        "docket"	INTEGER,
+                        "customer"	TEXT,
+                        "vendor"	TEXT,
+                        "completed_tasks"	INTEGER,
+                        "date_client"	TEXT,
+                        "date_request"	TEXT,
+                        "date_shipmet"	TEXT,
+                        "tasks"	TEXT,
+                        "note"	TEXT,
+                        "delivery_address"	TEXT,
+                        "closed"	INTEGER,
+                        PRIMARY KEY("docket")
+                    )""")
+        crsr.execute("""CREATE TABLE customers (name TEXT, address TEXT, phone TEXT, contact TEXT)""")
+        crsr.execute("""CREATE TABLE vendors (name TEXT, address TEXT, phone TEXT, contact TEXT)""")
+        crsr.execute("INSERT INTO customers VALUES (?,?,?,?)",("-","-","-","-"))
+        crsr.execute("INSERT INTO vendors VALUES (?,?,?,?)",("-","-","-","-"))
+        conn.commit()
+        
 def partners_list(db_name):
     """
     returns customer list for dropdownmenu
