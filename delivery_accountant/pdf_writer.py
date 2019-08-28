@@ -1,5 +1,5 @@
 from fpdf import FPDF
-from backend import get_open_tasks, parse_tasks, neat_time
+from backend import get_open_tasks, parse_tasks
 
 
 def report_open_tasks():
@@ -15,7 +15,7 @@ def report_open_tasks():
     for num, obj in enumerate(data):
         pdf.set_font("Arial", size=14)
         pdf.cell(0, 10, txt="Docket# "+str(obj[0])+" Customer: "+obj[1] +
-                 " Request date : "+neat_time(obj[2]), ln=1, align="L")
+                 " Request date : "+obj[2], ln=1, align="L")
         pdf.set_font("Arial", size=9)
         for line, entry in enumerate(parse_tasks(obj[3])):
             if entry is None:

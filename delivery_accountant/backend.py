@@ -2,6 +2,12 @@ import sqlite3
 import datetime
 import time
 
+
+CUSTOMER = "Customers"
+VENDOR = "Vendor"
+CUSTOMER_DB = "customers"
+VENDOR_DB = "vendors"
+
 # docket INTEGER,date_client INTEGER,date_require INTEGER, date_shipment INTEGER, requirements BLOB, notes TEXT
 
 # connection = sqlite3.connect("delivery.db")
@@ -25,21 +31,21 @@ def create_tables():
     with sqlite3.connect(DATABASEPATH) as conn:
         crsr = conn.cursor()
         crsr.execute("""CREATE TABLE "deliveries" (
-                        "docket"	INTEGER,
-                        "customer"	TEXT,
-                        "vendor"	TEXT,
-                        "completed_tasks"	INTEGER,
-                        "date_client"	TEXT,
-                        "date_request"	TEXT,
-                        "date_shipmet"	TEXT,
-                        "tasks"	TEXT,
-                        "note"	TEXT,
-                        "delivery_address"	TEXT,
-                        "closed"	INTEGER,
+                        "docket"    INTEGER PRIMARY KEY ,
+                        "customer"  TEXT,
+                        "vendor"    TEXT,
+                        "completed_tasks"   INTEGER,
+                        "date_client"   TEXT,
+                        "date_request"  TEXT,
+                        "date_shipmet"  TEXT,
+                        "tasks" TEXT,
+                        "note"  TEXT,
+                        "delivery_address"  TEXT,
+                        "closed"    INTEGER,
                         PRIMARY KEY("docket")
-                    )""")
-        crsr.execute("""CREATE TABLE customers (name TEXT, address TEXT, phone TEXT, contact TEXT)""")
-        crsr.execute("""CREATE TABLE vendors (name TEXT, address TEXT, phone TEXT, contact TEXT)""")
+                    );""")
+        crsr.execute("""CREATE TABLE customers (name TEXT, address TEXT, phone TEXT, contact TEXT);""")
+        crsr.execute("""CREATE TABLE vendors (name TEXT, address TEXT, phone TEXT, contact TEXT);""")
         crsr.execute("INSERT INTO customers VALUES (?,?,?,?)",("-","-","-","-"))
         crsr.execute("INSERT INTO vendors VALUES (?,?,?,?)",("-","-","-","-"))
         conn.commit()
@@ -51,21 +57,27 @@ def partners_list(db_name):
     list_cust = None
     with sqlite3.connect(DATABASEPATH) as conn:
         crsr = conn.cursor()
-        if db_name == "customers":
+        if db_name == CUSTOMER_DB:
             crsr.execute("""SELECT name FROM customers BYORDER;""")
-        elif db_name == "vendors":
+        elif db_name == VENDOR_DB:
             crsr.execute("""SELECT name FROM vendors BYORDER;""")
         list_cust = crsr.fetchall()
     return list_cust
+
+def update_docket(docket,tasks):
+    with sqlite3.connect(DATABASEPATH) as conn:
+        crsr = conn.cursor()
+        crsr.execute("""UPDATE deliveries SET tasks=?,completed_tasks=? WHERE docket==?;""",(tasks[0],tasks[1],docket))
+        conn.commit()
 
 
 def partner_info(name, db_name):
     list_cust = None
     with sqlite3.connect(DATABASEPATH) as conn:
         crsr = conn.cursor()
-        if db_name == "Customers":
+        if db_name == CUSTOMER:
             crsr.execute("""SELECT * FROM customers WHERE name=?""", (name,))
-        elif db_name == "Vendors":
+        elif db_name == VENDOR:
             crsr.execute("""SELECT * FROM vendors WHERE name=?""", (name,))
 
         list_cust = crsr.fetchone()
@@ -102,10 +114,10 @@ def submit_partner(data, db_name):
     """
     with sqlite3.connect(DATABASEPATH) as conn:
         crsr = conn.cursor()
-        if db_name == "customers":
+        if db_name == CUSTOMER:
             crsr.execute("""INSERT INTO customers VALUES (?,?,?,?)""",
                          (data[0], data[1], data[2], data[3]))
-        elif db_name == "vendors":
+        elif db_name == VENDOR:
             crsr.execute("""INSERT INTO vendors VALUES (?,?,?,?)""",
                          (data[0], data[1], data[2], data[3]))
         conn.commit()
@@ -115,8 +127,8 @@ def get_open_tasks():
     data = None
     with sqlite3.connect(DATABASEPATH) as conn:
         crsr = conn.cursor()
-        crsr.execute("""SELECT docket, customer, date_require, tasks FROM deliveries
-                     WHERE completed_tasks=1 ORDER BY date_require""")
+        crsr.execute("""SELECT docket, customer, date_request, tasks FROM deliveries
+                     WHERE completed_tasks=1 ORDER BY date_request""")
         data = crsr.fetchall()
     return data
 
@@ -129,10 +141,10 @@ def submit_delivery(data):
         crsr = conn.cursor()
         crsr.execute(
             """
-            INSERT INTO deliveries VALUES (?,?,?,?,?,?,?,?,?,?)
+            INSERT INTO deliveries VALUES (?,?,?,?,?,?,?,?,?,?,?)
             """,
             (crsr.lastrowid, data[0], data[1], data[2], data[3], data[4],
-             data[5], data[6], data[7], data[8]))
+             data[5], data[6], data[7], data[8],0))
         conn.commit()
 
 
