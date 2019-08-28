@@ -56,6 +56,7 @@ def partners_list(db_name):
     """
     list_cust = None
     with sqlite3.connect(DATABASEPATH) as conn:
+        conn.row_factory = generator
         crsr = conn.cursor()
         if db_name == CUSTOMER_DB:
             crsr.execute("""SELECT name FROM customers BYORDER;""")
@@ -74,6 +75,7 @@ def update_docket(docket,tasks):
 def partner_info(name, db_name):
     list_cust = None
     with sqlite3.connect(DATABASEPATH) as conn:
+        conn.row_factory = generator
         crsr = conn.cursor()
         if db_name == CUSTOMER:
             crsr.execute("""SELECT * FROM customers WHERE name=?""", (name,))
@@ -126,6 +128,7 @@ def submit_partner(data, db_name):
 def get_open_tasks():
     data = None
     with sqlite3.connect(DATABASEPATH) as conn:
+        conn.row_factory = generator
         crsr = conn.cursor()
         crsr.execute("""SELECT docket, customer, date_request, tasks FROM deliveries
                      WHERE completed_tasks=1 ORDER BY date_request""")
@@ -152,25 +155,31 @@ def get_delivery(docket):
     """Returns a delivery by docket number"""
     delivery = None
     with sqlite3.connect(DATABASEPATH) as conn:
+        conn.row_factory = generator
         crsr = conn.cursor()
         crsr.execute("""SELECT * FROM deliveries WHERE docket=?""", (docket,))
         delivery = crsr.fetchone()
     return delivery
 
-
+def generator(crsr,row):
+    dictionary = {}
+    for i, col in enumerate(crsr.description):
+        dictionary[col[0]] = row[i]
+    return dictionary
 
 def get_recent(num=None):
     if num is None:
         num = 10
     data = []
     with sqlite3.connect(DATABASEPATH) as conn:
+        conn.row_factory = generator
         crsr = conn.cursor()
         crsr.execute("""
                     SELECT docket, customer, date_shipmet, delivery_address
                     FROM deliveries ORDER BY date_shipmet DESC
                     """)
         data = crsr.fetchmany(num)
-    return neat_data(data)
+    return data
 # TODO change column name to date_shipment instead of shipment
 
 
@@ -187,7 +196,7 @@ def neat_data(data):
             i[0], i[1], i[2], i[3])
         neat_data.append(neat_str)
         dockets.append(i[0])
-    return neat_data, dockets
+    return [neat_data, dockets]
 
 
 def neat_time(seconds):

@@ -1,10 +1,10 @@
-from fpdf import FPDF
-from backend import get_open_tasks, parse_tasks
+"""from fpdf import FPDF
+#from backend import get_open_tasks, parse_tasks
 
 
 def report_open_tasks():
     """
-    takes data from SQL db and transforms to PDF on some conditions
+    #takes data from SQL db and transforms to PDF on some conditions
     """
     data = get_open_tasks()
     pdf = FPDF(format="A4")
@@ -32,3 +32,4 @@ def report_open_tasks():
 
 if __name__ == "__main__":
     report_open_tasks()
+"""

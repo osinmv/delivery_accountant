@@ -1,9 +1,8 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from backend import partners_list, partner_info, get_delivery, get_recent
-from backend import neat_time, submit_delivery, submit_partner, create_tables, update_docket
+from request_data import request_by_docket, request_partner_info, request_partners, request_recent
 import datetime
-from pdf_writer import report_open_tasks
+# from pdf_writer import report_open_tasks
 from tkcalendar import DateEntry
 
 
@@ -20,8 +19,6 @@ SECONDARYCOLOR = "snow2"
 HIGHFONT = ("Open Sans", "12")
 BASICFONT = ("Open Sans", "12")
 ENTRYFONT = ("Open Sans", "12")
-
-
 
 
 class MainWindow(tk.Frame):
@@ -63,8 +60,8 @@ class MainWindow(tk.Frame):
             self.label_frame_search, bg=BASECOLOR, font=ENTRYFONT)
         self.search_entry.bind("<Return>", self.update_dockets_list)
         self.search_entry.grid(column=0, row=0)
-        data, dockets = get_recent()
-        self.list_dockets(data=data, dockets=dockets)
+        data = request_recent()
+        self.list_dockets(data=data)
 
     def draw_menu(self):
         """Creates menue in the app"""
@@ -80,7 +77,7 @@ class MainWindow(tk.Frame):
 
         self.menubar.add_cascade(label="Edit", menu=self.editmenu)
 
-        self.menubar.add_command(label="Report", command=report_open_tasks)
+       # self.menubar.add_command(label="Report", command=report_open_tasks)
         self.menubar.add_command(label="Test database", command=self.db_test)
         self.master.config(menu=self.menubar)
     # UI labels with dockets
@@ -91,7 +88,8 @@ class MainWindow(tk.Frame):
     def update_dockets_list(self, event):
         num = self.search_entry.get()
         self.update_by_docket(event, docket=int(num))
-        self.list_dockets(get_recent())
+        self.list_dockets(data = request_recent())
+
     def new_delivery(self):
         self.set_active()
         self.clear_entries()
@@ -112,14 +110,17 @@ class MainWindow(tk.Frame):
 
         self.docket_labels = []
         font_list = None
-        for i in range(0, len(data)):
+        for i, obj in enumerate(data):
             if i % 2 == 0:
                 font_list = SECONDARYCOLOR
             else:
                 font_list = BASECOLOR
-
+            # concatincates dict wit empty string
+            text = ""
+            for k, v in obj.items():
+                text = text + str(k)+" : "+str(v)+"\n"
             label = tk.Label(
-                self.label_frame_search, text=data[i],
+                self.label_frame_search, text=text,
                 bg=font_list)
             label.grid(column=0, row=i+1, sticky="NESW")
             label.bind("<Double-Button-1>", self.update_by_docket)
@@ -233,14 +234,15 @@ class MainWindow(tk.Frame):
         self.label_frame_tasks.grid(
             column=pos_x, row=pos_y, columnspan=span_x,
             rowspan=span_y, padx=10, pady=10)
-        self.task_label = tk.Label(self.label_frame_tasks,text="Tasks")
-        self.task_label.grid(column=0,row=0)
-        self.done_label = tk.Label(self.label_frame_tasks,text="Done")
-        self.done_label.grid(column=1,row=0)
-        self.task_date_label = tk.Label(self.label_frame_tasks,text="Date")
-        self.task_date_label.grid(column=2,row=0)
-        self.task_date_must_label = tk.Label(self.label_frame_tasks,text="Must Date")
-        self.task_date_must_label.grid(column=3,row=0)
+        self.task_label = tk.Label(self.label_frame_tasks, text="Tasks")
+        self.task_label.grid(column=0, row=0)
+        self.done_label = tk.Label(self.label_frame_tasks, text="Done")
+        self.done_label.grid(column=1, row=0)
+        self.task_date_label = tk.Label(self.label_frame_tasks, text="Date")
+        self.task_date_label.grid(column=2, row=0)
+        self.task_date_must_label = tk.Label(
+            self.label_frame_tasks, text="Must Date")
+        self.task_date_must_label.grid(column=3, row=0)
         for i in range(0, length):
             entry = tk.Entry(self.label_frame_tasks, width="75")
             entry.grid(column=0, row=i+1)
@@ -269,15 +271,16 @@ class MainWindow(tk.Frame):
         self.notes.grid(column=0, row=0)
 
     def update_customer_info(self, event):
-        data = partner_info(self.customer_info[1][0].get(), CUSTOMER)
+        data = request_partner_info(
+             CUSTOMER_DB,self.customer_info[1][0].get())
         if data is None:
             pass
         else:
             self.activate_info_entries(CUSTOMER)
-            for n, d in enumerate(data):
+            for n, d in data:
                 self.customer_info[1][n+1].delete(0, tk.END)
                 self.customer_info[1][n+1].insert(0, str(d))
-            self.deactivate_info_entries(CUSTOMER,include=False)
+            self.deactivate_info_entries(CUSTOMER, include=False)
             # return [[name_label, address_label, phone_label, contact_label],
             # [combobox, name, address, phone, contact]]
 
@@ -285,14 +288,20 @@ class MainWindow(tk.Frame):
         """
         updates info on customer frame
         """
+        tmp= []
+        for i in request_partners(CUSTOMER_DB):
+            tmp.append(i["name"])
         self.customer_info[1][0].configure(
-            values=partners_list(db_name=CUSTOMER_DB))
+            values=tmp)
 
     def update_vendor_combobox(self):
-        self.vendor_info[1][0].configure(values=partners_list(VENDOR_DB))
+        tmp= []
+        for i in request_partners(VENDOR_DB):
+            tmp.append(i["name"])
+        self.vendor_info[1][0].configure(values=tmp)
 
     def update_vendor_info(self, event):
-        data = partner_info(self.vendor_info[1][0].get(), VENDOR)
+        data = request_partner_info(VENDOR_DB,self.vendor_info[1][0].get())
         if data is None:
             pass
         else:
@@ -300,7 +309,7 @@ class MainWindow(tk.Frame):
             for n, d in enumerate(data):
                 self.vendor_info[1][n+1].delete(0, tk.END)
                 self.vendor_info[1][n+1].insert(1, str(d))
-            self.deactivate_info_entries(VENDOR,include=False)
+            self.deactivate_info_entries(VENDOR, include=False)
 
     def update_by_docket(self, event, docket=None):
         # this method parses widget text because of the explained below
@@ -312,15 +321,15 @@ class MainWindow(tk.Frame):
 
         self.set_active()
         self.clear_tasks()
-        
+
         # docket, customer, vendor, completed_tasks, date_client, date_require,
         # date_shipment, tasks, note, delivery address
         data = None
         if docket is None:
-            docket = int(event.widget["text"].split(" ")[2])
-            data = get_delivery(docket)
+            docket = int(event.widget["text"].split("\n")[0].split(" ")[2])
+            data = request_by_docket(docket)
         else:
-            data = get_delivery(docket)
+            data = request_by_docket(docket)
         if data is None:
             # create a message that will say that something wrong was inputed
             self.clear_entries()
@@ -329,32 +338,33 @@ class MainWindow(tk.Frame):
             self.clear_tasks()
 
         else:
-            func = lambda:update_docket(docket,self.read_tasks())
+            print(data)
+            func = lambda: update_docket(docket, self.read_tasks())
             self.btn_submit.configure(command=func)
-
+            # fields in dictionary are the same as fields in docket
             # update customer info
             self.customer_info[1][0].current(
-                self.customer_info[1][0]["values"].index((data[1],)))
+                self.customer_info[1][0]["values"].index((data["customer"])))
             self.update_customer_info(None)
             # none instead of event as update does
             # not depend on event variables
             # update vendor info
             self.vendor_info[1][0].current(
-                self.vendor_info[1][0]["values"].index((data[2],))
+                self.vendor_info[1][0]["values"].index((data["vendor"]))
             )
             self.update_vendor_info(None)
             # update dates
 
-            self.insert_dates(data[4:7])
+            self.insert_dates([data["date_client"], data["date_request"], data["date_shipmet"]])
 
             # update tasks dont forget that
             # at some point it should turn from bytes -> tuple -> string
 
-            self.update_tasks(data[7])
+            self.update_tasks(data["tasks"])
             # update notes
-            self.update_notes(data[8])
+            self.update_notes(data["note"])
             # update delivery address
-            self.update_delivery_address(data[9])
+            self.update_delivery_address(data["delivery_address"])
         self.readonly_mode()
 
     def update_notes(self, text):
@@ -396,7 +406,7 @@ class MainWindow(tk.Frame):
 
                 if not check.get():
                     done_tasks = False
-                
+
                 if check.get():
                     check = 1
                 else:
@@ -405,7 +415,7 @@ class MainWindow(tk.Frame):
         return [tasks, done_tasks]
 
     def read_delivery_entries(self):
-        self.update_dockets_list()
+        # self.update_dockets_list()
         self.btn_submit.configure(command=None)
         self.set_active()
         data = []
@@ -482,7 +492,7 @@ class MainWindow(tk.Frame):
             i.configure(state="normal")
         data[0].configure(state="readonly")
 
-    def deactivate_info_entries(self, partner,include=True):
+    def deactivate_info_entries(self, partner, include=True):
         """
         CHANGE SIMILAR SSTATEMENTS ON THIS
         IF .... CUSOTMER:
@@ -497,14 +507,14 @@ class MainWindow(tk.Frame):
                 data = self.vendor_info[1]
             for i in data[1:]:
                 i.configure(state="disabled")
-            
+
             data[0].configure(state="disabled")
 
     def update_tasks(self, text):
         if text is None:
             return None
         text = text.split("\n")
-        text.remove("")
+        #text.remove("")
         self.clear_tasks()
         for num, obj in enumerate(text):
             obj = obj.split("|")
@@ -548,12 +558,12 @@ class MainWindow(tk.Frame):
 
 
 def time_format(time_str):
-    time_str = time_str.split("/")
+    time_str=time_str.split("/")
     return datetime.datetime(
         year=2000+int(time_str[2]), month=int(time_str[0]), day=int(time_str[1])
     ).strftime("%m/%d/%Y")
 
 
-root = tk.Tk()
-app = MainWindow(master=root)
+root=tk.Tk()
+app=MainWindow(master=root)
 root.mainloop()
