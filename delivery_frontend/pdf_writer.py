@@ -1,4 +1,4 @@
-"""from fpdf import FPDF
+from fpdf import FPDF
 #from backend import get_open_tasks, parse_tasks
 
 
@@ -32,4 +32,3 @@ def report_open_tasks():
 
 if __name__ == "__main__":
     report_open_tasks()
-"""
